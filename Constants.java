@@ -6,5 +6,4 @@ package com.example.administrator.arnavigatedemo;
 
 public interface Constants {
     String AppKey = "3b313d4d744e41cb918aeac5b8afe53e";
-    long mapId = 2081;
 }

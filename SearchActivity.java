@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -37,6 +38,9 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
     private ListView listView;
     private LoadMapsAdapter mapsAdapter;
     private List<MapInfo> mapInfo;
+    private LinearLayout mSearchView;
+    private ListView beaconMapListView;
+    private boolean isShowBeaconList;
     private List<MapInfo> searchMapInfo;
     private ImageView mClearSearchContent;
     private EditText mSearchContent;
@@ -69,6 +73,9 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                     intent.putExtra("mapName",mapInfo.get(i).mapName);
                 }
                 startActivity(intent);
+                /*isShowBeaconList = true;
+                beaconMapListView.setVisibility(View.VISIBLE);
+                mSearchView.setVisibility(View.GONE);*/
             }
         });
         mSearchContent.addTextChangedListener(new TextWatcher() {
@@ -125,7 +132,20 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
         mClearSearchContent = (ImageView) findViewById(R.id.clear_search_content);
         mSearchContent = (EditText) findViewById(R.id.search_edt_content);
         mCancelSearchBtn = (TextView) findViewById(R.id.cancel_search_button);
+        beaconMapListView = (ListView) findViewById(R.id.beacon_info_list_view);
+        mSearchView = (LinearLayout) findViewById(R.id.search_view);
         searchMapInfo = new ArrayList<>();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isShowBeaconList) {
+            beaconMapListView.setVisibility(View.GONE);
+            mSearchView.setVisibility(View.VISIBLE);
+            isShowBeaconList = false;
+        }else {
+            super.onBackPressed();
+        }
     }
 
     @Override

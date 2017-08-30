@@ -2,6 +2,7 @@ package com.example.administrator.arnavigatedemo;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -27,6 +28,7 @@ import com.example.administrator.arnavigatedemo.http.UploadBeaconsService;
 import com.example.administrator.arnavigatedemo.model.BeaconInfo;
 import com.example.administrator.arnavigatedemo.model.GetBeaconsInfo;
 import com.example.administrator.arnavigatedemo.utils.CacheUtils;
+import com.example.administrator.arnavigatedemo.utils.SelfDialog;
 import com.google.gson.Gson;
 import com.palmaplus.nagrand.core.Types;
 import com.palmaplus.nagrand.data.DataSource;
@@ -99,6 +101,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mBtnShowMinor;
     private boolean isShowMinor;
     private boolean isUpload;
+    private Button startAddBeacon;
+    private SelfDialog dialog;
+    private boolean isStartModifyBeacon;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -183,6 +188,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         finishMove.setOnClickListener(this);
         mMapRotate.setOnClickListener(this);
         mBtnShowMinor.setOnClickListener(this);
+        startAddBeacon.setOnClickListener(this);
     }
 
     private void initView() {
@@ -228,9 +234,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mAddBeaconNumber = (TextView) findViewById(R.id.add_beacon_number);
         mBtnShowMinor = (Button) findViewById(R.id.showminor);
         minorList = new ArrayList<>();
+        SelfDialog.Builder builder = new SelfDialog.Builder();
+        dialog = builder.build(this);
+        startAddBeacon = (Button) findViewById(R.id.start_modify_beacon);
         List earthparking = gson.fromJson(earthParking.getString(mapName), List.class);
         if (earthparking == null) {
-            getBeaconsInfo();
+             getBeaconsInfo();
         }else {
             for(int j = 0; j < earthparking.size(); j++) {
                 BeaconInfo serializable = (BeaconInfo) earthParking.getSerializable(String.valueOf(earthparking.get(j)).substring(0,5));
@@ -362,11 +371,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mBtnShowMinor.setText("显示Minor");
                 }
                 break;
+            case R.id.start_modify_beacon:
+                if (isStartModifyBeacon) {
+                    isStartModifyBeacon = false;
+                    startAddBeacon.setText("停止打点");
+                    dialog.show();
+                    dialog.setInputCancelOnclickListener(new SelfDialog.OnInputCancelOnclickListener() {
+                        @Override
+                        public void onInputCancelClick() {
+                            dialog.dismiss();
+                        }
+                    });
+                    dialog.setInputEnsureOnclickListener(new SelfDialog.OnInputEnsureOnclickListener() {
+                        @Override
+                        public void onInputEnsureClick(String inputMapId) {
+                            if (String.valueOf(mapId).equals(inputMapId)) {
+                                dialog.dismiss();
+                            }else {
+                                Toast.makeText(MainActivity.this,"你输入的mapId有误，请重新输入",Toast.LENGTH_SHORT).show();
+                            }
+                            dialog.dismiss();
+                        }
+                    });
+                }else {
+                    isStartModifyBeacon = true;
+                    startAddBeacon.setText("开始打点");
+                    dialog.show();
+                    dialog.setInputCancelOnclickListener(new SelfDialog.OnInputCancelOnclickListener() {
+                        @Override
+                        public void onInputCancelClick() {
+                            dialog.dismiss();
+                        }
+                    });
+                    dialog.setInputEnsureOnclickListener(new SelfDialog.OnInputEnsureOnclickListener() {
+                        @Override
+                        public void onInputEnsureClick(String inputMapId) {
+                            if (String.valueOf(mapId).equals(inputMapId)) {
+                                dialog.dismiss();
+                            }else {
+                                Toast.makeText(MainActivity.this,"你输入的mapId有误，请重新输入",Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                }
+                break;
         }
     }
 
     private void uploadBeaconsInfo(final BeaconInfo beaconInfo) {
-        final ProgressDialog dialog = ProgressDialog.show(this,"shangchuanzhong","jiazaizhong");
+        final ProgressDialog dialog = ProgressDialog.show(this,"上传beacon","上传中");
         if (upLoadBeaconsInfoservice == null) {
             upLoadBeaconsInfoservice = ServiceFactory.getInstance().createService(UploadBeaconsService.class);
         }
