@@ -5,12 +5,10 @@ package com.example.administrator.arnavigatedemo.model;
  */
 
 public class ServiceMapInfo {
-
-    public String updateTime;
-
+    public int beaconCount;
+    public int id;
+    public String mapId;
     public String mapName;
-
-    public int beaconNumber;
-
-    public boolean isReviewed;
+    public String auditState;
+    public String date_Time;
 }

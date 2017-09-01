@@ -50,10 +50,10 @@ public class LoadBeaconAdapter extends BaseAdapter{
         }else {
             holder = (ViewHolder) view.getTag();
         }
-        holder.updateTime.setText(getItem(i).updateTime);
+        holder.updateTime.setText(getItem(i).date_Time);
         holder.mapName.setText(getItem(i).mapName);
-        holder.beaconNumber.setText(getItem(i).beaconNumber);
-        holder.isReviewed.setText(getItem(i).isReviewed?"已审核":"未审核");
+        holder.beaconNumber.setText(getItem(i).beaconCount+"");
+        holder.isReviewed.setText(getItem(i).auditState);
         return view;
     }
 

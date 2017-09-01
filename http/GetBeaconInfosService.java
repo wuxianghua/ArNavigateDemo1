@@ -12,6 +12,7 @@ import retrofit2.http.GET;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 import rx.Single;
 
 /**
@@ -20,6 +21,6 @@ import rx.Single;
 
 public interface GetBeaconInfosService {
     String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/api/BeaconInfo/GetBeaconInfoByWhere/{mapid}/{FloorId}")
-    Call<GetBeaconsInfo> getBeaconsInfo(@Path("mapid") long page, @Path("FloorId") long FloorId);
+    @GET("/BeaconInfo/GetBeaconsById")
+    Call<List<BeaconInfo>> getBeaconById(@Query("id") int id);
 }
