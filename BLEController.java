@@ -3,6 +3,8 @@ package com.example.administrator.arnavigatedemo;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -30,7 +32,8 @@ public class BLEController {
     /**
      * beacon扫描回调
      */
-    private BluetoothAdapter.LeScanCallback leScanCallback;
+    //private BluetoothAdapter.LeScanCallback leScanCallback;
+    private ScanCallback leScanCallback;
 
     /**
      * 扫描周期
@@ -71,7 +74,7 @@ public class BLEController {
 
     public void stop() {
         if (bluetoothAdapter != null) {
-            bluetoothAdapter.stopLeScan(leScanCallback);
+            bluetoothAdapter.getBluetoothLeScanner().stopScan(leScanCallback);
             isScanning = false;
         }
     }
@@ -83,19 +86,59 @@ public class BLEController {
     /**
      * 开始扫描周围的蓝牙设备
      */
-    public boolean start() {
+    public void start() {
         if (bluetoothAdapter != null && leScanCallback != null) {
-            bluetoothAdapter.stopLeScan(leScanCallback);
+            /*bluetoothAdapter.stopLeScan(leScanCallback);*/
+            bluetoothAdapter.getBluetoothLeScanner().stopScan(leScanCallback);
             bluetoothAdapter = null;
         }
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         if (bluetoothAdapter == null) {
-            return false;
+            return;
         }
         isScanning = true;
         Log.e(TAG,"我被设置为true");
-        leScanCallback = new BluetoothAdapter.LeScanCallback() {
+        leScanCallback = new ScanCallback() {
+            @Override
+            public void onScanResult(int callbackType, ScanResult result) {
+                super.onScanResult(callbackType, result);
+                final Beacon beacon = BeaconUtils.beaconFromLeScan(result.getDevice(),result.getRssi(),result.getScanRecord().getBytes());
+                if (beacon == null || beacon.getProximityUUID() == null) {
+                    return;
+                }
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        minor = beacon.getMinor();
+                        major = beacon.getMajor();
+                        uuid = beacon.getProximityUUID().toUpperCase();
+                        if (!list.contains(minor)&&beacon.getDistance()<4) {
+                            Log.e(TAG,beacon.getProximityUUID());
+                            list.add(minor);
+                            beaconInfo = new BeaconInfo();
+                            beaconInfo.minor = beacon.getMinor();
+                            beaconInfo.major = beacon.getMajor();
+                            beaconInfo.uuid = beacon.getProximityUUID();
+                            beaconInfo.rssi = beacon.getRssi();
+                            beacons.add(beaconInfo);
+                            mOnScanBeaconNumberListener.scanResult(beacons);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onBatchScanResults(List<ScanResult> results) {
+                super.onBatchScanResults(results);
+            }
+
+            @Override
+            public void onScanFailed(int errorCode) {
+                super.onScanFailed(errorCode);
+            }
+        };
+        /*leScanCallback = new BluetoothAdapter.LeScanCallback() {
             @Override
             public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
                 final Beacon beacon = BeaconUtils.beaconFromLeScan(bluetoothDevice,i,bytes);
@@ -122,9 +165,9 @@ public class BLEController {
                     }
                 });
             }
-        };
-        boolean b = bluetoothAdapter.startLeScan(leScanCallback);
-        return b;
+        };*/
+        //boolean b = bluetoothAdapter.startLeScan(leScanCallback);
+        bluetoothAdapter.getBluetoothLeScanner().startScan(leScanCallback);
     }
 
     public ArrayList<BeaconInfo> getBeacons() {
