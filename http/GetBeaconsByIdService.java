@@ -11,7 +11,7 @@ import retrofit2.http.Query;
  */
 
 public interface GetBeaconsByIdService {
-    String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/BeaconInfo/GetBeaconsById")
+    String BASE_URL = "http://cindy.palmap.cn";
+    @GET("/webapi/BeaconInfo/GetBeaconsById")
     Call<List<BeaconInfo>> getVersionByMapId(@Query("id") int id);
 }

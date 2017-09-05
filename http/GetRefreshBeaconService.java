@@ -14,7 +14,7 @@ import retrofit2.http.Path;
  */
 
 public interface GetRefreshBeaconService {
-    String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/BeaconInfo/GetRefreshBeaconinfos/{mapId}")
+    String BASE_URL = "http://cindy.palmap.cn";
+    @GET("/webapi/BeaconInfo/GetRefreshBeaconinfos/{mapId}")
     Call<List<BeaconInfo>> getRefreshBeaconByMapId(@Path("mapId") long mapId);
 }

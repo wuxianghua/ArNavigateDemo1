@@ -13,7 +13,7 @@ import retrofit2.http.Path;
  */
 
 public interface GetVersionByMapIdService {
-    String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/BeaconInfo/GetVersionsByMapId/{mapId}")
+    String BASE_URL = "http://cindy.palmap.cn";
+    @GET("/webapi/BeaconInfo/GetVersionsByMapId/{mapId}")
     Call<List<ServiceMapInfo>> getVersionByMapId(@Path("mapId") long mapId);
 }

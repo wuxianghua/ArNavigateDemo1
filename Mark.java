@@ -30,6 +30,7 @@ public class Mark extends LinearLayout implements OverlayCell {
   private long mFloorId;
   private BeaconInfo beaconInfo;
   private Beacon beacon;
+  private boolean isIntercept;
 
   private double[] mGeoCoordinate;
 
@@ -79,9 +80,13 @@ public class Mark extends LinearLayout implements OverlayCell {
     mTextView.setText(minor+"");
   }
 
+  public void setIsIntercept(boolean isIntercept) {
+     this.isIntercept = isIntercept;
+  }
+
   @Override
   public boolean onInterceptTouchEvent(MotionEvent ev) {
-    return false;
+    return !isIntercept;
   }
 
   /*

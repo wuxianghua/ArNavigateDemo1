@@ -14,8 +14,8 @@ import retrofit2.http.Query;
  */
 
 public interface GetProjectStartService {
-    String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/BeaconInfo/GetProjectStart/{mapId}")
+    String BASE_URL = "http://cindy.palmap.cn";
+    @GET("/webapi/BeaconInfo/GetProjectStart/{mapId}")
     Call<HttpResult> getProjectStart(@Path("mapId") long mapId,
-                                               @Query("versionId") int versionId);
+                                               @Query("id") int versionId);
 }

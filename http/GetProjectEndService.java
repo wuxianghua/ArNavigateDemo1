@@ -9,7 +9,7 @@ import retrofit2.http.Path;
  */
 
 public interface GetProjectEndService {
-    String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/BeaconInfo/GetProjectEnd/{mapId}")
+    String BASE_URL = "http://cindy.palmap.cn";
+    @GET("/webapi/BeaconInfo/GetProjectEnd/{mapId}")
     Call<HttpResult> getProjectEnd(@Path("mapId") long mapId);
 }

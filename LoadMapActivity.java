@@ -77,6 +77,7 @@ public class LoadMapActivity extends AppCompatActivity implements View.OnClickLi
                     Intent intent = new Intent(LoadMapActivity.this,MainActivity.class);
                     intent.putExtra("mapId",beaconMapsInfoList.get(i).mapId);
                     intent.putExtra("mapName",beaconMapsInfoList.get(i).mapName);
+                    intent.putExtra("isNative",true);
                     startActivityForResult(intent,REQUEST_CODE);
                 }
             }

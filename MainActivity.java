@@ -2,6 +2,7 @@ package com.example.administrator.arnavigatedemo;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.support.annotation.MainThread;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -40,6 +41,7 @@ import com.palmaplus.nagrand.core.Types;
 import com.palmaplus.nagrand.data.DataSource;
 import com.palmaplus.nagrand.view.MapOptions;
 import com.palmaplus.nagrand.view.MapView;
+import com.palmaplus.nagrand.view.overlay.OverlayCell;
 
 import org.json.JSONArray;
 import java.util.ArrayList;
@@ -109,11 +111,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mMapRotate;
     private boolean isMapRotate;
     private Button mBtnShowMinor;
-    private boolean isShowMinor;
+    private boolean isShowMinor = true;
     private boolean isUpload;
     private Button startAddBeacon;
     private SelfDialog dialog;
     private boolean isStartModifyBeacon = true;
+    private Intent intent;
+    private boolean isNative;
+    private Button mSetMapTouchable;
+    private List<Mark> mOverlayContainer;
+    private boolean isIntercept;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,6 +209,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mMapRotate.setOnClickListener(this);
         mBtnShowMinor.setOnClickListener(this);
         startAddBeacon.setOnClickListener(this);
+        mSetMapTouchable.setOnClickListener(this);
     }
 
     private void initView() {
@@ -221,10 +229,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mapId = getIntent().getLongExtra("mapId", 0);
         mapName = getIntent().getStringExtra("mapName");
         versionId = getIntent().getIntExtra("versionId",0);
+        isNative = getIntent().getBooleanExtra("isNative",false);
         this.setTitle(mapName);
         earthParking = CacheUtils.getInstance(mapName+"-"+mapId);
         mapView.getMap().startWithMapID(mapId);
-        mapView.setMaxScale(Long.MAX_VALUE);
         options = new MapOptions();
         options.setSkewEnabled(false);
         mapView.setMapOptions(options);
@@ -245,33 +253,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mDeleteBeaconInfo = (Button) findViewById(R.id.delete_beacon_info);
         finishMove = (Button) findViewById(R.id.move_finish);
         finishMove.setVisibility(View.GONE);
+        mSetMapTouchable = (Button) findViewById(R.id.set_map_touchable);
+        intent = new Intent();
+        mOverlayContainer = new ArrayList<>();
         mAddBeaconNumber = (TextView) findViewById(R.id.add_beacon_number);
         mBtnShowMinor = (Button) findViewById(R.id.showminor);
         isStartModifyBeacon = (boolean) SPUtils.get(MainActivity.this,"isStartModifyBeacon",true);
         startAddBeacon = (Button) findViewById(R.id.start_modify_beacon);
         if (isStartModifyBeacon) {
             startAddBeacon.setText("开始打点");
+            startScan.setVisibility(View.GONE);
         }else {
             startAddBeacon.setText("停止打点");
+            startScan.setVisibility(View.VISIBLE);
         }
         minorList = new ArrayList<>();
         SelfDialog.Builder builder = new SelfDialog.Builder();
         dialog = builder.build(this);
-        getBeaconsInfo(versionId);
-        List earthparking = gson.fromJson(earthParking.getString(mapName), List.class);
-        /*if (earthparking == null) {
-
-        }else {
-            for(int j = 0; j < earthparking.size(); j++) {
-                BeaconInfo serializable = (BeaconInfo) earthParking.getSerializable(String.valueOf(earthparking.get(j)).substring(0,5));
-                mKeys.add(String.valueOf(earthparking.get(j)).substring(0,5));
-                if (serializable == null) return;
-                addBeaconInfoMark(serializable);
-                list.add(serializable);
-                minorList.add(String.valueOf(serializable.minor));
+        if (!isNative) {
+            startAddBeacon.setVisibility(View.VISIBLE);
+            if (isStartModifyBeacon) {
+                getBeaconsInfo(versionId);
+            }else{
+                getRefreshBeaconInfos();
             }
-            mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
-        }*/
+        }else {
+            startAddBeacon.setVisibility(View.GONE);
+            startScan.setVisibility(View.GONE);
+            List earthparking = gson.fromJson(earthParking.getString(mapName), List.class);
+            {
+                for(int j = 0; j < earthparking.size(); j++) {
+                    BeaconInfo serializable = (BeaconInfo) earthParking.getSerializable(String.valueOf(earthparking.get(j)).substring(0,5));
+                    mKeys.add(String.valueOf(earthparking.get(j)).substring(0,5));
+                    if (serializable == null) return;
+                    addBeaconInfoMark(serializable);
+                    list.add(serializable);
+                    minorList.add(String.valueOf(serializable.minor));
+                }
+                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
+            }
+        }
     }
 
     @Override
@@ -316,6 +337,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 isShowSaveCard = false;
                 mAddIcon.setVisibility(View.VISIBLE);
                 mapView.removeOverlay(locationMark);
+                mOverlayContainer.remove(locationMark);
                 enSure.setVisibility(View.VISIBLE);
                 break;
             case R.id.save_beacon_data:
@@ -336,6 +358,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.delete_beacon_info:
                 mapView.removeOverlay(mMoveLocationMark);
+                mOverlayContainer.remove(mMoveLocationMark);
                 mShowScanResult.setVisibility(View.GONE);
                 enSure.setVisibility(View.VISIBLE);
                 list.remove(moveBeaconInfo);
@@ -354,6 +377,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.move_finish:
                 mapView.removeOverlay(mMoveLocationMark);
+                mOverlayContainer.remove(mMoveLocationMark);
                 finishMove.setVisibility(View.GONE);
                 mAddIcon.setVisibility(View.GONE);
                 addLocationMark(mMoveBeacon);
@@ -379,6 +403,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (isShowMinor) {
                     isShowMinor = false;
                     mapView.removeAllOverlay();
+                    mOverlayContainer.clear();
                     for (BeaconInfo info : list) {
                         addBeaconInfoMark(info);
                     }
@@ -386,6 +411,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }else {
                     isShowMinor = true;
                     mapView.removeAllOverlay();
+                    mOverlayContainer.clear();
                     for (BeaconInfo info : list) {
                         addBeaconInfoMark(info);
                     }
@@ -408,6 +434,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 Log.e(TAG,"开始打点");
                                 isStartModifyBeacon = false;
                                 SPUtils.put(MainActivity.this,"isStartModifyBeacon",isStartModifyBeacon);
+                                startScan.setVisibility(View.VISIBLE);
                                 startAddBeacon.setText("停止打点");
                                 getProjectStart();
                                 dialog.dismiss();
@@ -418,6 +445,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     });
                 }else {
+                    if (bleController.isScanning) {
+                        Toast.makeText(MainActivity.this,"结束打点之前请先停止部署", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     dialog.show();
                     dialog.setInputCancelOnclickListener(new SelfDialog.OnInputCancelOnclickListener() {
                         @Override
@@ -431,6 +462,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             if (String.valueOf(mapId).equals(inputMapId)) {
                                 isStartModifyBeacon = true;
                                 SPUtils.put(MainActivity.this,"isStartModifyBeacon",isStartModifyBeacon);
+                                startScan.setVisibility(View.GONE);
                                 startAddBeacon.setText("开始打点");
                                 getProjectEnd();
                                 dialog.dismiss();
@@ -441,6 +473,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     });
                 }
                 break;
+            case R.id.set_map_touchable:
+                if (mOverlayContainer.size() == 0) return;
+                if (isIntercept) {
+                    isIntercept = false;
+                    mSetMapTouchable.setText("点击");
+                    for (Mark mark : mOverlayContainer) {
+                        mark.setIsIntercept(isIntercept);
+                    }
+                }else {
+                    isIntercept = true;
+                    mSetMapTouchable.setText("移动");
+                    for (Mark mark : mOverlayContainer) {
+                        mark.setIsIntercept(isIntercept);
+                    }
+                }
+
         }
     }
 
@@ -507,10 +555,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         beaconsInfo.enqueue(new Callback<List<BeaconInfo>>() {
             @Override
             public void onResponse(Call<List<BeaconInfo>> call, Response<List<BeaconInfo>> response) {
-                if (response == null || response.body() == null) return;
+                if (response == null || response.body() == null||response.body().size() == 0) return;
+                list.clear();
+                minorList.clear();
                 for (BeaconInfo info : response.body()) {
                     addBeaconInfoMark(info);
+                    list.add(info);
+                    minorList.add(String.valueOf(info.minor));
                 }
+                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
             }
 
             @Override
@@ -539,8 +592,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 enSure.setVisibility(View.GONE);
                 isSaveBeaconInfo = false;
                 mModifyBeaconInfo.setVisibility(View.VISIBLE);
-                mDeleteBeaconInfo.setVisibility(bleController.isScanning ? View.GONE : View.VISIBLE);
-                mMoveBeaconInfo.setVisibility(bleController.isScanning ? View.GONE : View.VISIBLE);
+                mDeleteBeaconInfo.setVisibility(isNative || (bleController.isScanning || isStartModifyBeacon) ? View.GONE : View.VISIBLE);
+                mMoveBeaconInfo.setVisibility(isNative || (bleController.isScanning || isStartModifyBeacon) ? View.GONE : View.VISIBLE);
                 moveBeaconInfo = mark.getBeaconInfo();
                 mMoveLocationMark = mark;
                 mMoveBeacon = mark.getBeaconInfo();
@@ -560,6 +613,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         //将这个覆盖物添加到MapView中
         mapView.addOverlay(locationMark);
+        mOverlayContainer.add(locationMark);
         locationMark.setBeaconInfo(beaconInfo);
     }
 
@@ -579,8 +633,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 enSure.setVisibility(View.GONE);
                 isSaveBeaconInfo = false;
                 mModifyBeaconInfo.setVisibility(View.VISIBLE);
-                mDeleteBeaconInfo.setVisibility(bleController.isScanning ? View.GONE : View.VISIBLE);
-                mMoveBeaconInfo.setVisibility(bleController.isScanning ? View.GONE : View.VISIBLE);
+                mDeleteBeaconInfo.setVisibility(isNative || (isStartModifyBeacon || bleController.isScanning) ? View.GONE : View.VISIBLE);
+                mMoveBeaconInfo.setVisibility(isNative || (isStartModifyBeacon || bleController.isScanning) ? View.GONE : View.VISIBLE);
                 moveBeaconInfo = mark.getBeaconInfo();
                 mMoveLocationMark = mark;
                 mMoveBeacon = mark.getBeaconInfo();
@@ -598,7 +652,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         locationMark.setScanedColor(1);
         //将这个覆盖物添加到MapView中
         mapView.addOverlay(locationMark);
+        mOverlayContainer.add(locationMark);
         locationMark.setBeaconInfo(beacon);
+    }
+
+    @Override
+    public void onBackPressed() {
+        intent.putExtra("mapId",mapId);
+        setResult(RESULT_OK,intent);
+        finish();
     }
 
     @Override
@@ -638,16 +700,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         refreshBeaconByMapId.enqueue(new Callback<List<BeaconInfo>>() {
             @Override
             public void onResponse(Call<List<BeaconInfo>> call, Response<List<BeaconInfo>> response) {
-                if (response == null||response.body() == null) return;
+                if (response == null||response.body() == null) {
+                    Log.e(TAG,"刷新成功"+response.message());
+                    startAddBeacon.setText("开始打点");
+                    startScan.setVisibility(View.GONE);
+                    isStartModifyBeacon = true;
+                    SPUtils.put(MainActivity.this,"isStartModifyBeacon",isStartModifyBeacon);
+                    return;
+                }
+                Log.e(TAG,"刷新成功"+response.body().size());
                 mapView.removeAllOverlay();
+                mOverlayContainer.clear();
+                list.clear();
+                startAddBeacon.setText("结束打点");
+                startScan.setVisibility(View.VISIBLE);
+                isStartModifyBeacon = false;
+                mKeys.clear();
+                SPUtils.put(MainActivity.this,"isStartModifyBeacon",isStartModifyBeacon);
+                minorList.clear();
                 for (BeaconInfo info : response.body()) {
                     addBeaconInfoMark(info);
+                    list.add(info);
+                    info.uploadSuccess = true;
+                    earthParking.put(String.valueOf(info.minor),info);
+                    minorList.add(String.valueOf(info.minor));
+                    mKeys.add(String.valueOf(info.minor));
                 }
+                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
+                earthParking.put(mapName,mKeys.toString());
             }
 
             @Override
             public void onFailure(Call<List<BeaconInfo>> call, Throwable t) {
-
+                Log.e(TAG,"刷新失败");
             }
         });
     }

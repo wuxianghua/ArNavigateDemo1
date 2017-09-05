@@ -52,7 +52,7 @@ public class LoadBeaconAdapter extends BaseAdapter{
         }
         holder.updateTime.setText(getItem(i).date_Time);
         holder.mapName.setText(getItem(i).mapName);
-        holder.beaconNumber.setText(getItem(i).beaconCount+"");
+        holder.beaconNumber.setText(getItem(i).count+"");
         holder.isReviewed.setText(getItem(i).auditState);
         return view;
     }

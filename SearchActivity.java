@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.EditText;
@@ -70,9 +71,6 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                isShowBeaconList = true;
-                beaconMapListView.setVisibility(View.VISIBLE);
-                mSearchView.setVisibility(View.GONE);
                 if (isSearchState) {
                     mapId = searchMapInfo.get(i).mapId;
                     mapName = searchMapInfo.get(i).mapName;
@@ -91,7 +89,8 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                 intent.putExtra("mapId",mapId);
                 intent.putExtra("mapName",mapName);
                 intent.putExtra("versionId",serviceMapInfos.get(i).id);
-                startActivity(intent);
+                intent.putExtra("isNative",false);
+                startActivityForResult(intent,0);
             }
         });
 
@@ -143,6 +142,15 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
         mCancelSearchBtn.setOnClickListener(this);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 0 && resultCode == RESULT_OK) {
+            long mapId = data.getLongExtra("mapId", 0);
+            getVersionByMapId(mapId,null);
+        }
+    }
+
     private void getVersionByMapId(final long mapId, final String mapName) {
         if (getVersionByMapIdService == null) {
             getVersionByMapIdService = ServiceFactory.getInstance().createService(GetVersionByMapIdService.class);
@@ -154,11 +162,19 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                 if (response == null) return;
                 serviceMapInfos = response.body();
                 if (serviceMapInfos == null || serviceMapInfos.size() == 0) {
-                    Intent intent = new Intent(SearchActivity.this,MainActivity.class);
-                    intent.putExtra("mapId",mapId);
-                    intent.putExtra("mapName",mapName);
-                    startActivity(intent);
+                    if (mapName != null) {
+                        Intent intent = new Intent(SearchActivity.this,MainActivity.class);
+                        intent.putExtra("mapId",mapId);
+                        intent.putExtra("mapName",mapName);
+                        intent.putExtra("isNative",false);
+                        startActivityForResult(intent,0);
+                    }else {
+
+                    }
                 }else {
+                    isShowBeaconList = true;
+                    beaconMapListView.setVisibility(View.VISIBLE);
+                    mSearchView.setVisibility(View.GONE);
                     beaconAdapter = new LoadBeaconAdapter(SearchActivity.this,serviceMapInfos);
                     beaconMapListView.setAdapter(beaconAdapter);
                 }

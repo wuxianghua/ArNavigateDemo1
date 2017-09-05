@@ -5,7 +5,7 @@ package com.example.administrator.arnavigatedemo.model;
  */
 
 public class ServiceMapInfo {
-    public int beaconCount;
+    public int count;
     public int id;
     public String mapId;
     public String mapName;

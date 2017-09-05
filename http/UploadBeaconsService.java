@@ -18,8 +18,8 @@ import rx.Single;
  */
 
 public interface UploadBeaconsService {
-    String BASE_URL = "http://10.0.10.161:8010";
+    String BASE_URL = "http://cindy.palmap.cn";
     @Headers({"Content-type:application/json;charset=UTF-8"})
-    @POST("/BeaconInfo/PostBeaconInfo")
+    @POST("/webapi/BeaconInfo/PostBeaconInfo")
     Call<HttpResult> uploadBeaconsInfo(@Body RequestBody route);
 }

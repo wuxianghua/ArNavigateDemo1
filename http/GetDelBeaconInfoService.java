@@ -9,8 +9,8 @@ import retrofit2.http.Path;
  */
 
 public interface GetDelBeaconInfoService {
-    String BASE_URL = "http://10.0.10.161:8010";
-    @GET("/BeaconInfo/GetProjectStart/{mapId}/{minor}")
+    String BASE_URL = "http://cindy.palmap.cn";
+    @GET("/webapi/BeaconInfo/GetDelBeaconInfo/{mapId}/{minor}")
     Call<HttpResult> getDelBeaconInfo(@Path("mapId") long mapId,
                                       @Path("minor") int minor);
 }
