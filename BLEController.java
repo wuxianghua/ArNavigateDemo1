@@ -56,6 +56,7 @@ public class BLEController {
     private int major;
     private String uuid;
     private BeaconInfo beaconInfo;
+    private int scanResultFeild = 20;
     private Handler handler;
     private OnScanBeaconNumberListener mOnScanBeaconNumberListener;
 
@@ -113,7 +114,7 @@ public class BLEController {
                         minor = beacon.getMinor();
                         major = beacon.getMajor();
                         uuid = beacon.getProximityUUID().toUpperCase();
-                        if (!list.contains(minor)&&beacon.getDistance()<4) {
+                        if (!list.contains(minor)&&beacon.getDistance()<scanResultFeild/100) {
                             Log.e(TAG,beacon.getProximityUUID());
                             list.add(minor);
                             beaconInfo = new BeaconInfo();
@@ -168,6 +169,10 @@ public class BLEController {
         };*/
         //boolean b = bluetoothAdapter.startLeScan(leScanCallback);
         bluetoothAdapter.getBluetoothLeScanner().startScan(leScanCallback);
+    }
+
+    public void setScanFeild(int scanFeild) {
+        this.scanResultFeild = scanFeild;
     }
 
     public ArrayList<BeaconInfo> getBeacons() {

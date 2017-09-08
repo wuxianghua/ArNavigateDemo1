@@ -2,8 +2,6 @@ package com.example.administrator.arnavigatedemo;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
-import android.support.annotation.MainThread;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,39 +18,40 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.example.administrator.arnavigatedemo.http.DeleteBeaconsInfoService;
-import com.example.administrator.arnavigatedemo.http.GetBeaconInfosService;
 import com.example.administrator.arnavigatedemo.http.GetDelBeaconInfoService;
 import com.example.administrator.arnavigatedemo.http.GetProjectEndService;
 import com.example.administrator.arnavigatedemo.http.GetProjectStartService;
-import com.example.administrator.arnavigatedemo.http.GetRefreshBeaconService;
 import com.example.administrator.arnavigatedemo.http.HttpResult;
 import com.example.administrator.arnavigatedemo.http.ServiceFactory;
 import com.example.administrator.arnavigatedemo.http.UploadBeaconsService;
 import com.example.administrator.arnavigatedemo.model.BeaconInfo;
-import com.example.administrator.arnavigatedemo.model.GetBeaconsInfo;
-import com.example.administrator.arnavigatedemo.model.ServiceMapInfo;
+import com.example.administrator.arnavigatedemo.rx.RxBeaconRequest;
 import com.example.administrator.arnavigatedemo.utils.CacheUtils;
 import com.example.administrator.arnavigatedemo.utils.SPUtils;
 import com.example.administrator.arnavigatedemo.utils.SelfDialog;
+import com.example.administrator.arnavigatedemo.utils.ThreadPoolProxy;
 import com.google.gson.Gson;
 import com.palmaplus.nagrand.core.Types;
 import com.palmaplus.nagrand.data.DataSource;
 import com.palmaplus.nagrand.view.MapOptions;
 import com.palmaplus.nagrand.view.MapView;
-import com.palmaplus.nagrand.view.overlay.OverlayCell;
 
 import org.json.JSONArray;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener{
+public class MainActivity extends BaseActivity implements View.OnClickListener{
     private static final String TAG = "MainActivity";
     protected MapView mapView;
     protected ViewGroup container;
@@ -98,9 +97,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean isSaveBeaconInfo;
     private RequestBody body;
     private UploadBeaconsService upLoadBeaconsInfoservice;
-    private GetBeaconInfosService getBeaconInfosService;
     private GetDelBeaconInfoService deleteBeaconsInfoService;
-    private GetRefreshBeaconService getRefreshBeaconService;
     private GetProjectStartService getProjectStartService;
     private GetProjectEndService getProjectEndService;
     private long mapId;
@@ -111,16 +108,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mMapRotate;
     private boolean isMapRotate;
     private Button mBtnShowMinor;
-    private boolean isShowMinor = true;
+    private boolean isShowMinor;
     private boolean isUpload;
     private Button startAddBeacon;
     private SelfDialog dialog;
+    private SelfDialog feildDialog;
+    private Button mSetScanFeild;
     private boolean isStartModifyBeacon = true;
     private Intent intent;
     private boolean isNative;
     private Button mSetMapTouchable;
     private List<Mark> mOverlayContainer;
     private boolean isIntercept;
+    private ThreadPoolProxy mThreadPoolProxy;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -210,6 +210,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBtnShowMinor.setOnClickListener(this);
         startAddBeacon.setOnClickListener(this);
         mSetMapTouchable.setOnClickListener(this);
+        mSetScanFeild.setOnClickListener(this);
     }
 
     private void initView() {
@@ -236,6 +237,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         options = new MapOptions();
         options.setSkewEnabled(false);
         mapView.setMapOptions(options);
+        mSetScanFeild = (Button) findViewById(R.id.set_scan_field);
         mMapRotate = (Button) findViewById(R.id.startRotate);
         mBtnCancle = (Button) findViewById(R.id.cancle_save);
         mBtnSave = (Button) findViewById(R.id.save_beacon_data);
@@ -255,6 +257,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         finishMove.setVisibility(View.GONE);
         mSetMapTouchable = (Button) findViewById(R.id.set_map_touchable);
         intent = new Intent();
+        mThreadPoolProxy = new ThreadPoolProxy(1, 1, 3000);
         mOverlayContainer = new ArrayList<>();
         mAddBeaconNumber = (TextView) findViewById(R.id.add_beacon_number);
         mBtnShowMinor = (Button) findViewById(R.id.showminor);
@@ -268,8 +271,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             startScan.setVisibility(View.VISIBLE);
         }
         minorList = new ArrayList<>();
-        SelfDialog.Builder builder = new SelfDialog.Builder();
-        dialog = builder.build(this);
         if (!isNative) {
             startAddBeacon.setVisibility(View.VISIBLE);
             if (isStartModifyBeacon) {
@@ -278,26 +279,52 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 getRefreshBeaconInfos();
             }
         }else {
-            startAddBeacon.setVisibility(View.GONE);
-            startScan.setVisibility(View.GONE);
-            List earthparking = gson.fromJson(earthParking.getString(mapName), List.class);
-            {
-                for(int j = 0; j < earthparking.size(); j++) {
-                    BeaconInfo serializable = (BeaconInfo) earthParking.getSerializable(String.valueOf(earthparking.get(j)).substring(0,5));
-                    mKeys.add(String.valueOf(earthparking.get(j)).substring(0,5));
+            RxBeaconRequest.requestNativeBeacons(earthParking,mapName).subscribeOn(Schedulers.io()).doOnSubscribe(new Consumer<Disposable>() {
+                @Override
+                public void accept(Disposable disposable) throws Exception {
+                    startAddBeacon.setVisibility(View.GONE);
+                    startScan.setVisibility(View.GONE);
+                }
+            }).observeOn(Schedulers.io())
+                    .flatMap(new Function<List, ObservableSource<Double>>() {
+                        @Override
+                        public ObservableSource<Double> apply(final List list) throws Exception {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
+                                    hideLoading();
+                                }
+                            });
+                            return Observable.fromIterable(list);
+                        }
+                    }).subscribe(new Consumer<Double>() {
+                @Override
+                public void accept(Double s) throws Exception {
+                    BeaconInfo serializable = (BeaconInfo) earthParking.getSerializable(String.valueOf(s).substring(0, 5));
+                    mKeys.add(String.valueOf(s).substring(0, 5));
                     if (serializable == null) return;
                     addBeaconInfoMark(serializable);
                     list.add(serializable);
                     minorList.add(String.valueOf(serializable.minor));
                 }
-                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
-            }
+            }, new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    hideLoading();
+                }
+            });
         }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        mOverlayContainer.clear();
+        list.clear();
+        minorList.clear();
+        mKeys.clear();
+        mapView.removeAllOverlay();
         mapView.drop();
     }
 
@@ -400,25 +427,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.showminor:
                 if (isShowSaveCard) return;
-                if (isShowMinor) {
-                    isShowMinor = false;
-                    mapView.removeAllOverlay();
-                    mOverlayContainer.clear();
-                    for (BeaconInfo info : list) {
-                        addBeaconInfoMark(info);
+                if (!isShowMinor) {
+                    isShowMinor = true;
+                    for (Mark mark : mOverlayContainer) {
+                        mark.setMinorVisible(isShowMinor);
                     }
                     mBtnShowMinor.setText("隐藏Minor");
                 }else {
-                    isShowMinor = true;
-                    mapView.removeAllOverlay();
-                    mOverlayContainer.clear();
-                    for (BeaconInfo info : list) {
-                        addBeaconInfoMark(info);
+                    isShowMinor = false;
+                    for (Mark mark : mOverlayContainer) {
+                        mark.setMinorVisible(isShowMinor);
                     }
                     mBtnShowMinor.setText("显示Minor");
                 }
                 break;
             case R.id.start_modify_beacon:
+                if (dialog == null) {
+                    SelfDialog.Builder builder = new SelfDialog.Builder(this);
+                    dialog = builder.build();
+                }
                 if (isStartModifyBeacon) {
                     dialog.show();
                     dialog.setInputCancelOnclickListener(new SelfDialog.OnInputCancelOnclickListener() {
@@ -488,7 +515,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         mark.setIsIntercept(isIntercept);
                     }
                 }
-
+                break;
+            case R.id.set_scan_field:
+                if (feildDialog == null) {
+                    SelfDialog.Builder builder = new SelfDialog.Builder(this).hint("请输入扫描范围(厘米)");
+                    feildDialog = builder.build();
+                }
+                feildDialog.show();
+                feildDialog.setInputCancelOnclickListener(new SelfDialog.OnInputCancelOnclickListener() {
+                    @Override
+                    public void onInputCancelClick() {
+                        feildDialog.dismiss();
+                    }
+                });
+                feildDialog.setInputEnsureOnclickListener(new SelfDialog.OnInputEnsureOnclickListener() {
+                    @Override
+                    public void onInputEnsureClick(String content) {
+                        if (content != null) {
+                            bleController.setScanFeild(Integer.valueOf(content));
+                        }
+                        feildDialog.dismiss();
+                    }
+                });
+                break;
         }
     }
 
@@ -548,35 +597,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void getBeaconsInfo(int versionId) {
-        if (getBeaconInfosService == null) {
-            getBeaconInfosService = ServiceFactory.getInstance().createService(GetBeaconInfosService.class);
-        }
-        Call<List<BeaconInfo>> beaconsInfo = getBeaconInfosService.getBeaconById(versionId);
-        beaconsInfo.enqueue(new Callback<List<BeaconInfo>>() {
+        RxBeaconRequest.requestServerBeacons(versionId).doOnSubscribe(new Consumer<Disposable>() {
             @Override
-            public void onResponse(Call<List<BeaconInfo>> call, Response<List<BeaconInfo>> response) {
-                if (response == null || response.body() == null||response.body().size() == 0) return;
+            public void accept(Disposable disposable) throws Exception {
                 list.clear();
                 minorList.clear();
-                for (BeaconInfo info : response.body()) {
-                    addBeaconInfoMark(info);
-                    list.add(info);
-                    minorList.add(String.valueOf(info.minor));
-                }
-                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
             }
-
+        }).subscribeOn(Schedulers.io()).observeOn(Schedulers.io())
+                .flatMap(new Function<List, ObservableSource<BeaconInfo>>() {
+                    @Override
+                    public ObservableSource<BeaconInfo> apply(final List list) throws Exception {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
+                                hideLoading();
+                            }
+                        });
+                        return Observable.fromIterable(list);
+                    }
+                }).subscribe(new Consumer<BeaconInfo>() {
             @Override
-            public void onFailure(Call<List<BeaconInfo>> call, Throwable t) {
-                Log.e(TAG,"获取数据失败");
+            public void accept(BeaconInfo beaconInfo) throws Exception {
+                addBeaconInfoMark(beaconInfo);
+                list.add(beaconInfo);
+                earthParking.put(String.valueOf(beaconInfo.minor), beaconInfo);
+                minorList.add(String.valueOf(beaconInfo.minor));
+                mKeys.add(String.valueOf(beaconInfo.minor));
+            }
+        }, new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable throwable) throws Exception {
+                hideLoading();
             }
         });
     }
 
     public void addLocationMark(BeaconInfo beacon) {
-        beaconInfo = new BeaconInfo();
+        //beaconInfo = new BeaconInfo();
         beaconInfo = beacon;
         beaconInfo.floorId = mapView.getMap().getFloorId();
+        beaconInfo.floorName = mapView.getMap().getFloorName();
         beaconInfo.mapId = mapId;
         locationMark = new Mark(this, new Mark.OnClickListenerForMark() {
             @Override
@@ -608,9 +669,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         locationMark.setUuid(beacon.uuid);
         locationMark.setMajor(beacon.major);
         locationMark.setMinor(beacon.minor);
-        if (!isShowMinor) {
+        locationMark.setText();
+        /*if (!isShowMinor) {
             locationMark.setText();
-        }
+        }*/
         //将这个覆盖物添加到MapView中
         mapView.addOverlay(locationMark);
         mOverlayContainer.add(locationMark);
@@ -646,9 +708,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         locationMark.setUuid(beacon.uuid);
         locationMark.setMajor(beacon.major);
         locationMark.setMinor(beacon.minor);
-        if (!isShowMinor) {
+        locationMark.setText();
+        /*if (!isShowMinor) {
             locationMark.setText();
-        }
+        }*/
         locationMark.setScanedColor(1);
         //将这个覆盖物添加到MapView中
         mapView.addOverlay(locationMark);
@@ -658,8 +721,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onBackPressed() {
-        intent.putExtra("mapId",mapId);
-        setResult(RESULT_OK,intent);
+        mThreadPoolProxy.executeTask(new Runnable() {
+            @Override
+            public void run() {
+                intent.putExtra("mapId",mapId);
+                setResult(RESULT_OK,intent);
+            }
+        });
         finish();
     }
 
@@ -693,46 +761,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void getRefreshBeaconInfos() {
-        if (getRefreshBeaconService == null) {
-            getRefreshBeaconService = ServiceFactory.getInstance().createService(GetRefreshBeaconService.class);
-        }
-        Call<List<BeaconInfo>> refreshBeaconByMapId = getRefreshBeaconService.getRefreshBeaconByMapId(mapId);
-        refreshBeaconByMapId.enqueue(new Callback<List<BeaconInfo>>() {
+        RxBeaconRequest.refreshServerBeacons(mapId).subscribeOn(Schedulers.io())
+        .observeOn(Schedulers.io()).map(new Function<List, List<BeaconInfo>>() {
             @Override
-            public void onResponse(Call<List<BeaconInfo>> call, Response<List<BeaconInfo>> response) {
-                if (response == null||response.body() == null) {
-                    Log.e(TAG,"刷新成功"+response.message());
+            public List<BeaconInfo> apply(List list) throws Exception {
+                return list;
+            }
+        }).subscribe(new Consumer<List<BeaconInfo>>() {
+            @Override
+            public void accept(List<BeaconInfo> beaconInfos) throws Exception {
+                if (beaconInfos == null) {
                     startAddBeacon.setText("开始打点");
                     startScan.setVisibility(View.GONE);
                     isStartModifyBeacon = true;
-                    SPUtils.put(MainActivity.this,"isStartModifyBeacon",isStartModifyBeacon);
+                    SPUtils.put(MainActivity.this, "isStartModifyBeacon", isStartModifyBeacon);
                     return;
                 }
-                Log.e(TAG,"刷新成功"+response.body().size());
-                mapView.removeAllOverlay();
-                mOverlayContainer.clear();
-                list.clear();
-                startAddBeacon.setText("结束打点");
                 startScan.setVisibility(View.VISIBLE);
                 isStartModifyBeacon = false;
-                mKeys.clear();
-                SPUtils.put(MainActivity.this,"isStartModifyBeacon",isStartModifyBeacon);
-                minorList.clear();
-                for (BeaconInfo info : response.body()) {
+                SPUtils.put(MainActivity.this, "isStartModifyBeacon", isStartModifyBeacon);
+                for (BeaconInfo info : beaconInfos) {
+                    if (minorList.contains(String.valueOf(info.minor))) {
+                        continue;
+                    }
                     addBeaconInfoMark(info);
                     list.add(info);
                     info.uploadSuccess = true;
-                    earthParking.put(String.valueOf(info.minor),info);
+                    earthParking.put(String.valueOf(info.minor), info);
                     minorList.add(String.valueOf(info.minor));
                     mKeys.add(String.valueOf(info.minor));
                 }
-                mAddBeaconNumber.setText("添加的蓝牙数："+ list.size());
-                earthParking.put(mapName,mKeys.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        startAddBeacon.setText("结束打点");
+                        mAddBeaconNumber.setText("添加的蓝牙数：" + list.size());
+                        hideLoading();
+                    }
+                });
+                earthParking.put(mapName, mKeys.toString());
             }
-
+        }, new Consumer<Throwable>() {
             @Override
-            public void onFailure(Call<List<BeaconInfo>> call, Throwable t) {
-                Log.e(TAG,"刷新失败");
+            public void accept(Throwable throwable) throws Exception {
+                hideLoading();
             }
         });
     }

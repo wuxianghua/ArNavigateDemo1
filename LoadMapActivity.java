@@ -18,13 +18,19 @@ import android.widget.ListView;
 import com.example.administrator.arnavigatedemo.adapter.HasBeaconsMapAdapter;
 import com.example.administrator.arnavigatedemo.model.BeaconInfo;
 import com.example.administrator.arnavigatedemo.model.HasBeaconsMapInfo;
+import com.example.administrator.arnavigatedemo.rx.RxBeaconRequest;
 import com.example.administrator.arnavigatedemo.utils.CacheUtils;
+import com.example.administrator.arnavigatedemo.utils.ThreadPoolProxy;
 import com.google.gson.Gson;
 import com.palmaplus.nagrand.data.DataList;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * Created by Administrator on 2017/8/8/008.
@@ -46,6 +52,7 @@ public class LoadMapActivity extends AppCompatActivity implements View.OnClickLi
     private File absoluteFile;
     private List<HasBeaconsMapInfo> mDeleteBeaconMaps;
     public final int REQUEST_CODE = 1;
+    private ThreadPoolProxy mThreadPoolProxy;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -168,14 +175,18 @@ public class LoadMapActivity extends AppCompatActivity implements View.OnClickLi
                 if (isStateDelete) {
                     isStateDelete = false;
                     mllShowButtonDelete.setVisibility(View.GONE);
-                    mapAdapter.setStateDelete(isStateDelete);
-                    mapAdapter.notifyDataSetChanged();
+                    if (mapAdapter != null) {
+                        mapAdapter.setStateDelete(isStateDelete);
+                        mapAdapter.notifyDataSetChanged();
+                    }
                     mDeleteHasBeaconMaps.setImageResource(R.mipmap.delete_beacons_map);
                 }else {
                     isStateDelete = true;
                     mllShowButtonDelete.setVisibility(View.VISIBLE);
-                    mapAdapter.setStateDelete(isStateDelete);
-                    mapAdapter.notifyDataSetChanged();
+                    if (mapAdapter != null) {
+                        mapAdapter.setStateDelete(isStateDelete);
+                        mapAdapter.notifyDataSetChanged();
+                    }
                     mDeleteHasBeaconMaps.setImageResource(R.mipmap.delete_beacon_cancle);
                 }
                 break;

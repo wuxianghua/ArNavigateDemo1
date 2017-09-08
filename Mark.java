@@ -44,6 +44,10 @@ public class Mark extends LinearLayout implements OverlayCell {
     mIsScaned = false;
   }
 
+  public void setOnClickListenerForMark(OnClickListenerForMark onClickListenerForMark) {
+    this.onClickListenerForMark = onClickListenerForMark;
+  }
+
   private void initView() {
     View root =  LayoutInflater.from(getContext()).inflate(R.layout.item_mark, this);
 //    root.setOnClickListener(this);
@@ -78,6 +82,14 @@ public class Mark extends LinearLayout implements OverlayCell {
       * */
   public void setText(){
     mTextView.setText(minor+"");
+  }
+
+  public void setMinorVisible(boolean b) {
+    if (b) {
+      mTextView.setVisibility(VISIBLE);
+    }else {
+      mTextView.setVisibility(INVISIBLE);
+    }
   }
 
   public void setIsIntercept(boolean isIntercept) {

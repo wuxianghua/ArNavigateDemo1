@@ -8,6 +8,8 @@ import android.util.Log;
 
 import com.example.administrator.arnavigatedemo.utils.Utils;
 import com.palmaplus.nagrand.core.Engine;
+import com.squareup.leakcanary.LeakCanary;
+import com.tencent.bugly.crashreport.CrashReport;
 
 import java.io.File;
 
@@ -30,7 +32,17 @@ public class App extends Application {
         Utils.init(this);
         Engine instance = Engine.getInstance();
         instance.startWithLicense(Constants.AppKey, this);
+        if (LeakCanary.isInAnalyzerProcess(this)) {
+            // This process is dedicated to LeakCanary for heap analysis.
+            // You should not init your app in this process.
+            return;
+        }
+        LeakCanary.install(this);
+        CrashReport.initCrashReport(this, "1edeedbd8f", true);
+        // Normal app init code...
     }
+
+
 
     public static App getInstance() {
         return mInstance;

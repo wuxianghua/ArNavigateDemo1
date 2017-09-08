@@ -18,6 +18,7 @@ public class SelfDialog extends Dialog {
     private TextView inputEnsure;//确认
     private TextView inputCancel;//取消输入
     private EditText mapIdContent;//输入的mapId
+    private String mHintText;
 
     private OnInputCancelOnclickListener mOnInputCancelclickListener;//忘记密码按钮被点击了的监听器
     private OnInputEnsureOnclickListener mOnInputEnsureclickListener;//重新输入按钮被点击了的监听器
@@ -54,7 +55,6 @@ public class SelfDialog extends Dialog {
         initView();
         //初始化界面控件的事件
         initEvent();
-
     }
 
     /**
@@ -82,6 +82,10 @@ public class SelfDialog extends Dialog {
         });
     }
 
+    private void setHintText(String mHintText) {
+        this.mHintText = mHintText;
+    }
+
     /**
      * 初始化界面控件
      */
@@ -89,6 +93,7 @@ public class SelfDialog extends Dialog {
         inputCancel =  findViewById(R.id.input_cancel);
         inputEnsure =  findViewById(R.id.input_ensure);
         mapIdContent = findViewById(R.id.map_edt_content);
+        mapIdContent.setHint(mHintText);
     }
 
     /**
@@ -103,8 +108,18 @@ public class SelfDialog extends Dialog {
     }
 
     public static class Builder{
-        public SelfDialog build(Context context){
-            return new SelfDialog(context);
+        private SelfDialog selfDialog;
+        public Builder(Context context) {
+            selfDialog = new SelfDialog(context);
+        }
+
+        public Builder hint(String hintText) {
+            selfDialog.setHintText(hintText);
+            return this;
+        }
+
+        public SelfDialog build(){
+            return selfDialog;
         }
     }
 }

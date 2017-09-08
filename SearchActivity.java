@@ -1,19 +1,24 @@
 package com.example.administrator.arnavigatedemo;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.administrator.arnavigatedemo.adapter.LoadBeaconAdapter;
 import com.example.administrator.arnavigatedemo.adapter.LoadMapsAdapter;
@@ -22,6 +27,7 @@ import com.example.administrator.arnavigatedemo.http.ServiceFactory;
 import com.example.administrator.arnavigatedemo.manager.MapLoadManager;
 import com.example.administrator.arnavigatedemo.model.MapInfo;
 import com.example.administrator.arnavigatedemo.model.ServiceMapInfo;
+import com.example.administrator.arnavigatedemo.utils.ThreadPoolProxy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +40,7 @@ import retrofit2.Response;
  * Created by Administrator on 2017/8/10/010.
  */
 
-public class SearchActivity extends AppCompatActivity implements View.OnClickListener{
+public class SearchActivity extends BaseActivity implements View.OnClickListener{
     private static final String TAG = "SearchActivity";
     private MapLoadManager mapLoadManager;
     private ListView listView;
@@ -53,6 +59,7 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
     private boolean isSearchState;
     private long mapId;
     private String mapName;
+    private ThreadPoolProxy mThreadPoolProxy;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,6 +85,9 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                     mapId = mapInfo.get(i).mapId;
                     mapName = mapInfo.get(i).mapName;
                 }
+                showLoading();
+                InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(mSearchContent.getWindowToken(),0);
                 getVersionByMapId(mapId,mapName);
             }
         });
@@ -107,9 +117,10 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
 
             @Override
             public void afterTextChanged(Editable editable) {
-                if (editable.length() == 0) {
+                if (editable.length() == 0 ) {
                     mClearSearchContent.setVisibility(View.GONE);
                     isSearchState = false;
+                    if (mapInfo == null) return;
                     mapsAdapter.setMapData(mapInfo);
                 }else {
                     isSearchState = true;
@@ -146,8 +157,14 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 0 && resultCode == RESULT_OK) {
-            long mapId = data.getLongExtra("mapId", 0);
-            getVersionByMapId(mapId,null);
+            final long mapId = data.getLongExtra("mapId", 0);
+            mThreadPoolProxy = new ThreadPoolProxy(1, 1, 3000);
+            mThreadPoolProxy.executeTask(new Runnable() {
+                @Override
+                public void run() {
+                    getVersionByMapId(mapId,null);
+                }
+            });
         }
     }
 
@@ -159,6 +176,7 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
         versionByMapId.enqueue(new Callback<List<ServiceMapInfo>>() {
             @Override
             public void onResponse(Call<List<ServiceMapInfo>> call, Response<List<ServiceMapInfo>> response) {
+                hideLoading();
                 if (response == null) return;
                 serviceMapInfos = response.body();
                 if (serviceMapInfos == null || serviceMapInfos.size() == 0) {
@@ -173,16 +191,28 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                     }
                 }else {
                     isShowBeaconList = true;
-                    beaconMapListView.setVisibility(View.VISIBLE);
-                    mSearchView.setVisibility(View.GONE);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            beaconMapListView.setVisibility(View.VISIBLE);
+                            mSearchView.setVisibility(View.GONE);
+                        }
+                    });
                     beaconAdapter = new LoadBeaconAdapter(SearchActivity.this,serviceMapInfos);
                     beaconMapListView.setAdapter(beaconAdapter);
+                    hideLoading();
                 }
             }
 
             @Override
             public void onFailure(Call<List<ServiceMapInfo>> call, Throwable t) {
-
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        hideLoading();
+                        Toast.makeText(SearchActivity.this,"获取版本信息失败",Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
