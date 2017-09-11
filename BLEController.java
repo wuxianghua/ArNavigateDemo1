@@ -108,7 +108,7 @@ public class BLEController {
                         minor = beacon.getMinor();
                         major = beacon.getMajor();
                         uuid = beacon.getProximityUUID().toUpperCase();
-                        if (!list.contains(minor)&&beacon.getDistance()<4) {
+                        if (!list.contains(minor)&&beacon.getDistance()<0.5) {
                             Log.e(TAG,beacon.getProximityUUID());
                             list.add(minor);
                             beaconInfo = new BeaconInfo();

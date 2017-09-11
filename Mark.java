@@ -80,6 +80,14 @@ public class Mark extends LinearLayout implements OverlayCell {
     mTextView.setText(minor+"");
   }
 
+  public void setMinorVisibility(boolean isVisible) {
+    if (isVisible) {
+      mTextView.setVisibility(VISIBLE);
+    }else {
+      mTextView.setVisibility(INVISIBLE);
+    }
+  }
+
   public void setIsIntercept(boolean isIntercept) {
      this.isIntercept = isIntercept;
   }

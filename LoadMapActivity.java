@@ -105,10 +105,10 @@ public class LoadMapActivity extends AppCompatActivity implements View.OnClickLi
                 String string = instance.getString(split[0]);
                 Gson gson = new Gson();
                 List<Double> list = gson.fromJson(string, List.class);
-                if (list == null) return;
+                if (list == null) continue;
                 for (double i : list) {
                     BeaconInfo beaconInfo = (BeaconInfo) instance.getSerializable(String.valueOf(i).substring(0,5));
-                    if (beaconInfo == null) return;
+                    if (beaconInfo == null) continue;
                     if (beaconInfo.uploadSuccess) {
 
                     }else {

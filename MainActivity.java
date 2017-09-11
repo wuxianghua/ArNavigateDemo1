@@ -45,6 +45,7 @@ import com.palmaplus.nagrand.view.overlay.OverlayCell;
 
 import org.json.JSONArray;
 import java.util.ArrayList;
+import java.util.IllegalFormatCodePointException;
 import java.util.List;
 
 import okhttp3.RequestBody;
@@ -178,6 +179,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_compose:
+                if (isStartModifyBeacon) return super.onOptionsItemSelected(item);
                 isUpload = true;
                 List earthparking = gson.fromJson(earthParking.getString(mapName), List.class);
                 if (earthparking == null) {
@@ -248,7 +250,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         RelativeLayout relativeLayout = (RelativeLayout)findViewById(R.id.control_container);
         mapView.getMap().setDefaultWidgetContrainer(relativeLayout);
         mapView.getMap().getCompass().setVisibility(View.GONE);
-        mapView.getMap().getScale().setVisibility(View.INVISIBLE);
         mapView.getMap().getSwitch().setVisibility(View.GONE);
         mDeleteBeaconInfo = (Button) findViewById(R.id.delete_beacon_info);
         finishMove = (Button) findViewById(R.id.move_finish);
@@ -296,15 +297,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        mapView.drop();
-        mapView.stop();
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
+        mapView.drop();
+        mapView.stop();
     }
 
     @Override
@@ -408,18 +404,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (isShowSaveCard) return;
                 if (isShowMinor) {
                     isShowMinor = false;
-                    mapView.removeAllOverlay();
-                    mOverlayContainer.clear();
-                    for (BeaconInfo info : list) {
-                        addBeaconInfoMark(info);
+                    for (Mark mark : mOverlayContainer) {
+                        mark.setMinorVisibility(true);
                     }
                     mBtnShowMinor.setText("隐藏Minor");
                 }else {
                     isShowMinor = true;
-                    mapView.removeAllOverlay();
-                    mOverlayContainer.clear();
-                    for (BeaconInfo info : list) {
-                        addBeaconInfoMark(info);
+                    for (Mark mark : mOverlayContainer) {
+                        mark.setMinorVisibility(false);
                     }
                     mBtnShowMinor.setText("显示Minor");
                 }
@@ -614,9 +606,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         locationMark.setUuid(beacon.uuid);
         locationMark.setMajor(beacon.major);
         locationMark.setMinor(beacon.minor);
-        if (!isShowMinor) {
-            locationMark.setText();
-        }
+        locationMark.setText();
         //将这个覆盖物添加到MapView中
         mapView.addOverlay(locationMark);
         mOverlayContainer.add(locationMark);
@@ -652,10 +642,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         locationMark.setUuid(beacon.uuid);
         locationMark.setMajor(beacon.major);
         locationMark.setMinor(beacon.minor);
-        if (!isShowMinor) {
-            locationMark.setText();
-        }
         locationMark.setScanedColor(1);
+        locationMark.setText();
         //将这个覆盖物添加到MapView中
         mapView.addOverlay(locationMark);
         mOverlayContainer.add(locationMark);
