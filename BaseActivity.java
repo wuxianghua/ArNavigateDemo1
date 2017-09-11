@@ -6,8 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 
 import com.example.administrator.arnavigatedemo.di.ActivityModule;
 import com.example.administrator.arnavigatedemo.di.DaggerActivityComponent;
-import com.example.administrator.arnavigatedemo.presenter.BleScanResultPresenter;
-import com.example.administrator.arnavigatedemo.view.MainActivity;
 import com.example.administrator.arnavigatedemo.widget.ProgressDialogDelegate;
 
 import javax.inject.Inject;

@@ -5,17 +5,11 @@ import android.content.Intent;
 import com.example.administrator.arnavigatedemo.BaseActivity;
 import com.example.administrator.arnavigatedemo.Mark;
 import com.example.administrator.arnavigatedemo.model.BeaconInfo;
-import com.example.administrator.arnavigatedemo.presenter.BleScanResultPresenter;
-import com.example.administrator.arnavigatedemo.presenter.BleScanResultPresenterImp;
 import com.example.administrator.arnavigatedemo.widget.ProgressDialogDelegate;
 import com.google.gson.Gson;
 import com.palmaplus.nagrand.view.MapOptions;
 
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import javax.inject.Inject;
 
 import dagger.Module;
 import dagger.Provides;
