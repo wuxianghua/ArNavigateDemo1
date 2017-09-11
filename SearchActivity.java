@@ -16,6 +16,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.administrator.arnavigatedemo.adapter.LoadBeaconAdapter;
 import com.example.administrator.arnavigatedemo.adapter.LoadMapsAdapter;
@@ -37,7 +38,7 @@ import retrofit2.Response;
  * Created by Administrator on 2017/8/10/010.
  */
 
-public class SearchActivity extends AppCompatActivity implements View.OnClickListener{
+public class SearchActivity extends BaseActivity implements View.OnClickListener{
     private static final String TAG = "SearchActivity";
     private MapLoadManager mapLoadManager;
     private ListView listView;
@@ -81,6 +82,7 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                     mapId = mapInfo.get(i).mapId;
                     mapName = mapInfo.get(i).mapName;
                 }
+                showLoading();
                 InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(mSearchContent.getWindowToken(),0);
                 getVersionByMapId(mapId,mapName);
@@ -115,6 +117,7 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
                 if (editable.length() == 0) {
                     mClearSearchContent.setVisibility(View.GONE);
                     isSearchState = false;
+                    if (mapInfo == null) return;
                     mapsAdapter.setMapData(mapInfo);
                 }else {
                     isSearchState = true;
@@ -164,6 +167,7 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
         versionByMapId.enqueue(new Callback<List<ServiceMapInfo>>() {
             @Override
             public void onResponse(Call<List<ServiceMapInfo>> call, Response<List<ServiceMapInfo>> response) {
+                hideLoading();
                 if (response == null) return;
                 serviceMapInfos = response.body();
                 if (serviceMapInfos == null || serviceMapInfos.size() == 0) {
@@ -187,7 +191,7 @@ public class SearchActivity extends AppCompatActivity implements View.OnClickLis
 
             @Override
             public void onFailure(Call<List<ServiceMapInfo>> call, Throwable t) {
-
+                Toast.makeText(SearchActivity.this,"获取版本信息失败",Toast.LENGTH_SHORT).show();
             }
         });
     }
