@@ -296,9 +296,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        mapView.drop();
+        mapView.stop();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        mapView.drop();
     }
 
     @Override
