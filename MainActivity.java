@@ -29,6 +29,7 @@ import com.example.administrator.arnavigatedemo.http.GetProjectStartService;
 import com.example.administrator.arnavigatedemo.http.GetRefreshBeaconService;
 import com.example.administrator.arnavigatedemo.http.HttpResult;
 import com.example.administrator.arnavigatedemo.http.ServiceFactory;
+import com.example.administrator.arnavigatedemo.http.UploadAllBeaconsService;
 import com.example.administrator.arnavigatedemo.http.UploadBeaconsService;
 import com.example.administrator.arnavigatedemo.model.BeaconInfo;
 import com.example.administrator.arnavigatedemo.model.GetBeaconsInfo;
@@ -99,6 +100,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
     private boolean isSaveBeaconInfo;
     private RequestBody body;
     private UploadBeaconsService upLoadBeaconsInfoservice;
+    private UploadAllBeaconsService upLoadAllBeaconsInfoservice;
     private GetBeaconInfosService getBeaconInfosService;
     private GetDelBeaconInfoService deleteBeaconsInfoService;
     private GetRefreshBeaconService getRefreshBeaconService;
@@ -181,15 +183,17 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
             case R.id.action_compose:
                 if (isStartModifyBeacon) return super.onOptionsItemSelected(item);
                 isUpload = true;
+                List<BeaconInfo> beaconInfoContainerTemp = new ArrayList();
                 List earthparking = gson.fromJson(earthParking.getString(mapName), List.class);
                 if (earthparking == null) {
                     return super.onOptionsItemSelected(item);
                 } else {
                     for (int j = 0; j < earthparking.size(); j++) {
                         BeaconInfo serializable = (BeaconInfo) earthParking.getSerializable(String.valueOf(earthparking.get(j)).substring(0, 5));
-                        if (serializable == null) return super.onOptionsItemSelected(item);
-                        uploadBeaconsInfo(serializable);
+                        if (serializable == null) continue;
+                        beaconInfoContainerTemp.add(serializable);
                     }
+                    uploadAllBeaconsInfo(beaconInfoContainerTemp);
                 }
                 break;
             case R.id.refresh_beacon_info:
@@ -528,6 +532,36 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
         });
     }
 
+    private void uploadAllBeaconsInfo(final List<BeaconInfo> beaconInfos) {
+        final ProgressDialog dialog = ProgressDialog.show(this,"上传beacon","上传中");
+        if (upLoadAllBeaconsInfoservice == null) {
+            upLoadAllBeaconsInfoservice = ServiceFactory.getInstance().createService(UploadAllBeaconsService.class);
+        }
+        body = RequestBody.create(okhttp3.MediaType.parse("application/json;charset=UTF-8"),gson.toJson(beaconInfos));
+        Call<HttpResult> httpResultCall = upLoadAllBeaconsInfoservice.uploadAllBeaconsInfo(body);
+        httpResultCall.enqueue(new Callback<HttpResult>() {
+            @Override
+            public void onResponse(Call<HttpResult> call, Response<HttpResult> response) {
+                dialog.hide();
+                Log.e(TAG,"上传成功"+response.body().State);
+                if (isUpload) {
+                    Toast.makeText(MainActivity.this,"上传成功",Toast.LENGTH_SHORT).show();
+                    isUpload = false;
+                }
+            }
+
+            @Override
+            public void onFailure(Call<HttpResult> call, Throwable t) {
+                dialog.hide();
+                Log.e(TAG,"上传失败"+t);
+                if (isUpload) {
+                    Toast.makeText(MainActivity.this,"上传失败",Toast.LENGTH_SHORT).show();
+                    isUpload = false;
+                }
+            }
+        });
+    }
+
     private void deleteBeaconsInfo(int minor) {
         if (deleteBeaconsInfoService == null) {
             deleteBeaconsInfoService = ServiceFactory.getInstance().createService(GetDelBeaconInfoService.class);
@@ -575,6 +609,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
         beaconInfo = new BeaconInfo();
         beaconInfo = beacon;
         beaconInfo.floorId = mapView.getMap().getFloorId();
+        beaconInfo.floorName = mapView.getMap().getFloorName();
         beaconInfo.mapId = mapId;
         locationMark = new Mark(this, new Mark.OnClickListenerForMark() {
             @Override
