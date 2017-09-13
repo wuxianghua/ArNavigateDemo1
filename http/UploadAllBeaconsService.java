@@ -13,5 +13,5 @@ public interface UploadAllBeaconsService {
     String BASE_URL = "http://cindy.palmap.cn";
     @Headers({"Content-type:application/json;charset=UTF-8"})
     @POST("/webapi/BeaconInfo/PostAddBeaconInfoList")
-    Call<HttpResult> uploadBeaconsInfo(@Body RequestBody route);
+    Call<HttpResult> uploadAllBeaconsInfo(@Body RequestBody route);
 }
