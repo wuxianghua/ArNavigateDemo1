@@ -191,6 +191,7 @@ public class SearchActivity extends BaseActivity implements View.OnClickListener
 
             @Override
             public void onFailure(Call<List<ServiceMapInfo>> call, Throwable t) {
+                hideLoading();
                 Toast.makeText(SearchActivity.this,"获取版本信息失败",Toast.LENGTH_SHORT).show();
             }
         });
