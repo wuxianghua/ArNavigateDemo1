@@ -5,5 +5,5 @@ package com.example.administrator.arnavigatedemo;
  */
 
 public interface Constants {
-    String AppKey = "99512bdebcf84413a57b7c2354062b51";
+    String AppKey = "cb1e6ed5f490465582661fea330e4867";
 }
